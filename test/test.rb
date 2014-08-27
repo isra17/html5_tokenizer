@@ -1,6 +1,4 @@
-require '../lib/html5_tokenizer'
-require '../lib/token'
-require 'pry'
+require 'html5_tokenizer'
 
 t = Html5Tokenizer::Tokenizer.new
 t.insert('<!DOCTYPE html> <img src="test" asd=fsd>asd <bà\ré/> </a>   <!-- comments -->')

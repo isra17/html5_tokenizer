@@ -2,18 +2,33 @@ require 'test/unit'
 require 'html5_tokenizer'
 
 class TokenizerTest < Test::Unit::TestCase
-  def test_run_text
+  def tokens(tokenizer)
+    tokens = []
+    tokenizer.run { |t| tokens << t }
+    tokens
+  end
+
+  def tokenize(html)
     tokenizer = Html5Tokenizer::Tokenizer::new()
-    tokenizer.insert('foobar')
-    tokenizer.run do |token|
-      assert_equal :character, token.type
-      assert_equal 'foobar', token.value
+    tokenizer.insert(html)
+    tokenizer.eof()
+    tokens(tokenizer)
+  end
+
+  def assert_tokens(expecteds, actuals)
+    actuals.zip(expecteds).each do |actual, expected|
+      expected.each { |k,v| assert_equal v, actual.send(k), "Test token #{actual}" }
     end
   end
 
+  def test_run_text
+    token = tokenize('foobar').first
+    assert_equal :character, token.type
+    assert_equal 'foobar', token.value
+  end
+
   def test_run_html
-    tokenizer = Html5Tokenizer::Tokenizer::new()
-    tokenizer.insert('<!doctype html><html><body><a><img src="http://test.com/img"/> An Image </a><!--End-->"')
+    actuals = tokenize('<!doctype html><html><body><a><img src="http://test.com/img"/> An Image </a><!--End-->')
     expecteds = [
       { :type => :doctype, :name => 'html', :public_missing => true, :public_id => '', :system_missing => true, :system_id => '', :force_quirks => false },
       { :type => :start_tag, :name => 'html', :ns => :ns_html, :attributes => {}, :self_closing => false },
@@ -23,55 +38,68 @@ class TokenizerTest < Test::Unit::TestCase
       { :type => :character, :value => ' An Image ' },
       { :type => :end_tag, :name => 'a', :ns => :ns_html, :attributes => {}, :self_closing => false },
       { :type => :comment, :value => 'End' },
+      { :type => :eof }
     ]
 
-    actuals = []
-    tokenizer.run { |t| actuals << t }
-
-    actuals.zip(expecteds).each do |actual, expected|
-      expected.each { |k,v| assert_equal v, actual.send(k), "Test token #{actual.type}" }
-    end
+    assert_tokens(expecteds, actuals)
   end
 
   def test_public_doctype
-    tokenizer = Html5Tokenizer::Tokenizer::new()
-    tokenizer.insert('<!DOCTYPE foo PUBLIC "public_location">')
-    tokenizer.run do |token|
-      assert_equal :doctype, token.type
-      assert_equal 'foo', token.name
-      assert_equal false, token.public_missing
-      assert_equal 'public_location', token.public_id
-      assert_equal true, token.system_missing
-      assert_equal '', token.system_id
-      assert_equal false, token.force_quirks
-    end
+    actuals = tokenize('<!DOCTYPE foo PUBLIC "public_location">')
+    expecteds = [{ :type => :doctype, :name => 'foo',
+                   :public_missing => false, :public_id => 'public_location',
+                   :system_missing => true, :system_id => '',
+                   :force_quirks => false },
+                 { :type => :eof }]
+
+    assert_tokens(expecteds, actuals)
   end
 
   def test_system_doctype
-    tokenizer = Html5Tokenizer::Tokenizer::new()
-    tokenizer.insert('<!DOCTYPE foo SYSTEM "system_location">')
-    tokenizer.run do |token|
-      assert_equal :doctype, token.type
-      assert_equal 'foo', token.name
-      assert_equal true, token.public_missing
-      assert_equal '', token.public_id
-      assert_equal false, token.system_missing
-      assert_equal 'system_location', token.system_id
-      assert_equal false, token.force_quirks
-    end
+    actuals = tokenize('<!DOCTYPE foo SYSTEM "system_location">')
+    expecteds = [{ :type => :doctype, :name => 'foo',
+                   :public_missing => true, :public_id => '',
+                   :system_missing => false, :system_id => 'system_location',
+                   :force_quirks => false },
+                 { :type => :eof }]
+
+    assert_tokens(expecteds, actuals)
   end
 
   def test_quirk_doctype
+    actuals = tokenize('<!DOCTYPE>')
+    expecteds = [{ :type => :doctype, :name => '',
+                   :public_missing => true, :public_id => '',
+                   :system_missing => true, :system_id => '',
+                   :force_quirks => true },
+                 { :type => :eof }]
+
+    assert_tokens(expecteds, actuals)
+  end
+
+  def test_tag_ns
+    actuals = tokenize(%q{<a:a/><b a=a b="b" c='c'></a/></b>})
+    expecteds = [
+      { :type => :start_tag, :name => 'a:a', :ns => :ns_html, :attributes => {}, :self_closing => true },
+      { :type => :start_tag, :name => 'b', :ns => :ns_html, :attributes => {'a'=>'a','b'=>'b','c'=>'c'}, :self_closing => false },
+      { :type => :end_tag, :name => 'a', :ns => :ns_html, :attributes => {}, :self_closing => true },
+      { :type => :end_tag, :name => 'b', :ns => :ns_html, :attributes => {}, :self_closing => false },
+      { :type => :eof },
+    ]
+
+    assert_tokens(expecteds, actuals);
+  end
+
+  def test_reentrant_tokenize
     tokenizer = Html5Tokenizer::Tokenizer::new()
-    tokenizer.insert('<!doctype>"')
+    tokenizer.insert('<!--<a b="c">-->')
     tokenizer.run do |token|
-      assert_equal :doctype, token.type
-      assert_equal '', token.name
-      assert_equal true, token.public_missing
-      assert_equal '', token.public_id
-      assert_equal true, token.system_missing
-      assert_equal '', token.system_id
-      assert_equal true, token.force_quirks
+      assert_equal :comment, token.type
+      assert_equal '<a b="c">', token.value
+      inner_token = tokenize(token.value).first
+      assert_equal :start_tag, inner_token.type
+      assert_equal 'a', inner_token.name
+      assert_equal ({'b'=>'c'}), inner_token.attributes
     end
   end
 end

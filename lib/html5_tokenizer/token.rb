@@ -61,7 +61,7 @@ module Html5Tokenizer
     end
 
     class Eof < Token
-      def initialize(value)
+      def initialize()
         self.type = :eof
       end
     end

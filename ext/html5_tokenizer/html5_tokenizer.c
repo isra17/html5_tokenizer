@@ -17,6 +17,7 @@ VALUE cTokenizer = Qnil;
 static void Init_Tokenizer();
 static VALUE Tokenizer_new(VALUE rb_class);
 static VALUE Tokenizer_insert(VALUE rb_self, VALUE rb_data);
+static VALUE Tokenizer_eof(VALUE rb_self);
 static VALUE Tokenizer_run(VALUE rb_self);
 static void Tokenizer_free(void *p);
 
@@ -53,6 +54,7 @@ void Init_Tokenizer() {
   cTokenizer = rb_define_class_under(mHtml5Tokenizer, "Tokenizer", rb_cObject);
   rb_define_singleton_method(cTokenizer, "new", Tokenizer_new, 0);
   rb_define_method(cTokenizer, "insert", Tokenizer_insert, 1);
+  rb_define_method(cTokenizer, "eof", Tokenizer_eof, 0);
   rb_define_method(cTokenizer, "run", Tokenizer_run, 0);
 }
 
@@ -72,6 +74,14 @@ VALUE Tokenizer_insert(VALUE rb_self, VALUE rb_data) {
   Data_Get_Struct(rb_self, tokenizer_engine_t, tok_eng);
 
   parserutils_inputstream_append(tok_eng->stream, (uint8_t*) RSTRING_PTR(rb_data), RSTRING_LEN(rb_data));
+  return Qnil;
+}
+
+VALUE Tokenizer_eof(VALUE rb_self) {
+  tokenizer_engine_t* tok_eng;
+  Data_Get_Struct(rb_self, tokenizer_engine_t, tok_eng);
+
+  parserutils_inputstream_append(tok_eng->stream, NULL, 0);
   return Qnil;
 }
 

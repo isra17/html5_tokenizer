@@ -32,4 +32,46 @@ class TokenizerTest < Test::Unit::TestCase
       expected.each { |k,v| assert_equal v, actual.send(k), "Test token #{actual.type}" }
     end
   end
+
+  def test_public_doctype
+    tokenizer = Html5Tokenizer::Tokenizer::new()
+    tokenizer.insert('<!DOCTYPE foo PUBLIC "public_location">')
+    tokenizer.run do |token|
+      assert_equal :doctype, token.type
+      assert_equal 'foo', token.name
+      assert_equal false, token.public_missing
+      assert_equal 'public_location', token.public_id
+      assert_equal true, token.system_missing
+      assert_equal '', token.system_id
+      assert_equal false, token.force_quirks
+    end
+  end
+
+  def test_system_doctype
+    tokenizer = Html5Tokenizer::Tokenizer::new()
+    tokenizer.insert('<!DOCTYPE foo SYSTEM "system_location">')
+    tokenizer.run do |token|
+      assert_equal :doctype, token.type
+      assert_equal 'foo', token.name
+      assert_equal true, token.public_missing
+      assert_equal '', token.public_id
+      assert_equal false, token.system_missing
+      assert_equal 'system_location', token.system_id
+      assert_equal false, token.force_quirks
+    end
+  end
+
+  def test_quirk_doctype
+    tokenizer = Html5Tokenizer::Tokenizer::new()
+    tokenizer.insert('<!doctype>"')
+    tokenizer.run do |token|
+      assert_equal :doctype, token.type
+      assert_equal '', token.name
+      assert_equal true, token.public_missing
+      assert_equal '', token.public_id
+      assert_equal true, token.system_missing
+      assert_equal '', token.system_id
+      assert_equal true, token.force_quirks
+    end
+  end
 end

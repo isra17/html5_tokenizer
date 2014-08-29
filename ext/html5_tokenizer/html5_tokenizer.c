@@ -3,7 +3,7 @@
 #include <hubbub/tokeniser.h>
 #include <parserutils/input/inputstream.h>
 
-#define INT2BOOL(x) x?Qtrue:Qfalse
+#define INT2BOOL(x) (x?Qtrue:Qfalse)
 #define STR2SYM(s) ID2SYM(rb_intern(s))
 
 typedef struct {

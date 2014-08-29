@@ -10,7 +10,8 @@ module Html5Tokenizer
         self.public_missing = public_missing
         self.public_id = public_id
         self.system_missing = system_missing
-        self.force_quirks
+        self.system_id = system_id
+        self.force_quirks = force_quirks
         self.type = :doctype
       end
     end

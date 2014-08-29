@@ -9,7 +9,7 @@ class TokenizerTest < Test::Unit::TestCase
   end
 
   def tokenize(html)
-    tokenizer = Html5Tokenizer::Tokenizer::new()
+    tokenizer = Html5Tokenizer::Tokenizer.new()
     tokenizer.insert(html)
     tokenizer.eof()
     tokens(tokenizer)
@@ -91,7 +91,7 @@ class TokenizerTest < Test::Unit::TestCase
   end
 
   def test_reentrant_tokenize
-    tokenizer = Html5Tokenizer::Tokenizer::new()
+    tokenizer = Html5Tokenizer::Tokenizer.new()
     tokenizer.insert('<!--<a b="c">-->')
     tokenizer.run do |token|
       assert_equal :comment, token.type
@@ -101,5 +101,14 @@ class TokenizerTest < Test::Unit::TestCase
       assert_equal 'a', inner_token.name
       assert_equal ({'b'=>'c'}), inner_token.attributes
     end
+  end
+
+  def test_insert_non_string
+    tokenizer = Html5Tokenizer::Tokenizer.new()
+    tokenizer.insert(nil)
+    tokenizer.insert(1)
+    tokenizer.insert(tokenizer)
+    tokenizer.eof()
+    tokenizer.run {|t| assert_equal :eof, t.type}
   end
 end

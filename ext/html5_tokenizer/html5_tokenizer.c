@@ -35,8 +35,14 @@ VALUE cEndTag;
 VALUE cComment;
 VALUE cCharacter;
 VALUE cEof;
-void Init_Token();
+static void Init_Token();
 static VALUE wrap_token(const hubbub_token* token);
+
+VALUE cTokenizerError;
+VALUE cStreamError;
+static void Init_Errors();
+static void parserutils_error_to_rb(parserutils_error error);
+static void raise_hubbub_error(hubbub_error error);
 
 static void* rb_realloc(void* ptr, size_t len, void* pw) {
 	return REALLOC_N(ptr, char, len);
@@ -46,6 +52,21 @@ void Init_html5_tokenizer() {
   mHtml5Tokenizer = rb_define_module("Html5Tokenizer");
   Init_Tokenizer();
   Init_Token();
+  Init_Errors();
+}
+
+// ====== Errors class ======
+void Init_Errors() {
+  cTokenizerError = rb_define_class_under(mHtml5Tokenizer, "TokenizerError", cTokenizer);
+  cStreamError = rb_define_class_under(mHtml5Tokenizer, "StreamError", cTokenizerError);
+}
+
+void raise_parseutils_error(parserutils_error error) {
+  rb_raise(cStreamError, "Error code: %d", error);
+}
+
+void raise_hubbub_error(hubbub_error error) {
+  rb_raise(cTokenizerError, "Error code: %d", error);
 }
 
 // ====== Tokenizer class ======
@@ -61,8 +82,18 @@ void Init_Tokenizer() {
 VALUE Tokenizer_new(VALUE rb_class) {
   tokenizer_engine_t* tok_eng = ALLOC(tokenizer_engine_t);
 
-  parserutils_inputstream_create("UTF-8", 0, NULL, rb_realloc, NULL, &tok_eng->stream);
-  hubbub_tokeniser_create(tok_eng->stream, rb_realloc, NULL, &tok_eng->tokenizer);
+  parserutils_error stream_error = parserutils_inputstream_create("UTF-8", 0, NULL, rb_realloc, NULL, &tok_eng->stream);
+  if(stream_error != PARSERUTILS_OK) {
+    raise_parseutils_error(stream_error);
+    return Qnil;
+  }
+
+  hubbub_error tok_error = hubbub_tokeniser_create(tok_eng->stream, rb_realloc, NULL, &tok_eng->tokenizer);
+  if(tok_error != HUBBUB_OK) {
+    parserutils_inputstream_destroy(tok_eng->stream);
+    raise_hubbub_error(tok_error);
+    return Qnil;
+  }
 
   VALUE rb_tdata = Data_Wrap_Struct(rb_class, 0, Tokenizer_free, tok_eng);
   rb_obj_call_init(rb_tdata, 0, 0);
@@ -70,10 +101,15 @@ VALUE Tokenizer_new(VALUE rb_class) {
 }
 
 VALUE Tokenizer_insert(VALUE rb_self, VALUE rb_data) {
+  if(TYPE(rb_data) != T_STRING) return Qnil;
   tokenizer_engine_t* tok_eng;
   Data_Get_Struct(rb_self, tokenizer_engine_t, tok_eng);
 
-  parserutils_inputstream_append(tok_eng->stream, (uint8_t*) RSTRING_PTR(rb_data), RSTRING_LEN(rb_data));
+  parserutils_error stream_error = parserutils_inputstream_append(tok_eng->stream, (uint8_t*) RSTRING_PTR(rb_data), RSTRING_LEN(rb_data));
+  if(stream_error != PARSERUTILS_OK) {
+    raise_parseutils_error(stream_error);
+  }
+
   return Qnil;
 }
 
@@ -81,7 +117,11 @@ VALUE Tokenizer_eof(VALUE rb_self) {
   tokenizer_engine_t* tok_eng;
   Data_Get_Struct(rb_self, tokenizer_engine_t, tok_eng);
 
-  parserutils_inputstream_append(tok_eng->stream, NULL, 0);
+  parserutils_error stream_error = parserutils_inputstream_append(tok_eng->stream, NULL, 0);
+  if(stream_error != PARSERUTILS_OK) {
+    raise_parseutils_error(stream_error);
+  }
+
   return Qnil;
 }
 
@@ -94,7 +134,11 @@ VALUE Tokenizer_run(VALUE rb_self) {
   params.token_handler.pw = NULL;
 
   hubbub_tokeniser_setopt(tok_eng->tokenizer, HUBBUB_TOKENISER_TOKEN_HANDLER, &params);
-  hubbub_tokeniser_run(tok_eng->tokenizer);
+  hubbub_error tok_error = hubbub_tokeniser_run(tok_eng->tokenizer);
+  if(tok_error != HUBBUB_OK) {
+    raise_hubbub_error(tok_error);
+  }
+
   return Qnil;
 }
 

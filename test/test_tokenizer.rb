@@ -1,7 +1,7 @@
 require 'test/unit'
 require 'html5_tokenizer'
 
-class TokenizerTest < Test::Unit::TestCase
+class TestTokenizer < Test::Unit::TestCase
   def tokens(tokenizer)
     tokens = []
     tokenizer.run { |t| tokens << t }
@@ -16,6 +16,7 @@ class TokenizerTest < Test::Unit::TestCase
   end
 
   def assert_tokens(expecteds, actuals)
+    assert_equal expecteds.count, actuals.count
     actuals.zip(expecteds).each do |actual, expected|
       expected.each { |k,v| assert_equal v, actual.send(k), "Test token #{actual}" }
     end
@@ -110,5 +111,17 @@ class TokenizerTest < Test::Unit::TestCase
     tokenizer.insert(tokenizer)
     tokenizer.eof()
     tokenizer.run {|t| assert_equal :eof, t.type}
+  end
+
+  def test_cdata
+    actuals = tokenize(%q{<script><![CDATA[<foo></bar>]]></script>})
+    expecteds = [
+      { :type => :start_tag, :name => 'script', :ns => :ns_html, :attributes => {}, :self_closing => false },
+      { :type => :character, :value => '<foo></bar>' },
+      { :type => :end_tag, :name => 'script', :ns => :ns_html, :attributes => {}, :self_closing => false },
+      { :type => :eof },
+    ]
+
+    assert_tokens(expecteds, actuals);
   end
 end

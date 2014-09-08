@@ -95,6 +95,10 @@ VALUE Tokenizer_new(VALUE rb_class) {
     return Qnil;
   }
 
+  hubbub_tokeniser_optparams param;
+  param.process_cdata = true;
+  hubbub_tokeniser_setopt(tok_eng->tokenizer, HUBBUB_TOKENISER_PROCESS_CDATA, &param);
+
   VALUE rb_tdata = Data_Wrap_Struct(rb_class, 0, Tokenizer_free, tok_eng);
   rb_obj_call_init(rb_tdata, 0, 0);
   return rb_tdata;

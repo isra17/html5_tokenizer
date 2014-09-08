@@ -4,3 +4,5 @@ end
 
 require "html5_tokenizer/html5_tokenizer"
 require "html5_tokenizer/token"
+require "html5_tokenizer/scanner"
+require "html5_tokenizer/rewriter"

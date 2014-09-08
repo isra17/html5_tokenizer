@@ -20,7 +20,7 @@ C_SRC= \
 
 C_OBJS = $(patsubst %.c,%.o,$(C_SRC))
 # -DNDEBUG is here to keep hubbub from spewing out debug info to the consolo
-CFLAGS += -Isrc -Iinclude -I../libparserutils/include -fPIC -DNDEBUG
+CFLAGS += -Isrc -Iinclude -I../libparserutils/include -fPIC -DNDEBUG -O3
 
 .PHONY: all
 all: libhubbub.dummy

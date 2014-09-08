@@ -40,7 +40,7 @@ class TestScanner < Test::Unit::TestCase
   def test_scanner
     expected = [:doctype, :start_tag, :end_tag, :character, :comment]
     scanner = AssertScanner.new(self, '<!doctype><tag></tag>text<!--comment-->')
-    scanner.process()
+    scanner.run()
     assert_equal expected, scanner.result
   end
 end

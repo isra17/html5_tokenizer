@@ -10,7 +10,7 @@ module Html5Tokenizer
       @tokenizer.eof()
     end
 
-    def process()
+    def run()
       @tokenizer.run do |token|
         handle_token(token)
       end

@@ -29,7 +29,7 @@ C_SRC= \
 	$(NULL)
 
 C_OBJS = $(patsubst %.c,%.o,$(C_SRC))
-CFLAGS += -Isrc -Isrc/charset -Iinclude -fPIC
+CFLAGS += -Isrc -Isrc/charset -Iinclude -fPIC -O3
 ifeq ($(OSTYPE), android)
     CFLAGS += -DWITHOUT_ICONV_FILTER
 endif

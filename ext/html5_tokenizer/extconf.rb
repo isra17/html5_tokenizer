@@ -22,6 +22,8 @@ have_library('parserutils')
 
 have_library('iconv')
 
+$CFLAGS += ' -O3'
+
 extension_name = 'html5_tokenizer'
 dir_config(extension_name)
 create_makefile(extension_name)
